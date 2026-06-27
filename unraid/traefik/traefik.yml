@@ -1,0 +1,75 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+entryPoints:
+  web:
+    address: ":8080"
+    forwardedHeaders:
+      # Tunnel terminates TLS upstream; only trust forwarded headers from the dedicated tunnel network.
+      trustedIPs:
+        - "10.88.10.0/24"
+    transport:
+      respondingTimeouts:
+        readTimeout: "60s"
+        writeTimeout: "0s"
+        idleTimeout: "180s"
+      lifeCycle:
+        graceTimeOut: "30s"
+
+  websecure:
+    address: ":8443"
+    forwardedHeaders:
+      trustedIPs:
+        - "10.88.10.0/24"
+    transport:
+      respondingTimeouts:
+        readTimeout: "60s"
+        writeTimeout: "0s"
+        idleTimeout: "180s"
+      lifeCycle:
+        graceTimeOut: "30s"
+
+  health:
+    address: ":8082"
+
+providers:
+  docker:
+    endpoint: "tcp://docker-socket-proxy:2375"
+    exposedByDefault: false
+    network: homelab_edge
+  file:
+    directory: /etc/traefik/config
+    watch: true
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+  bufferingSize: 100
+  fields:
+    defaultMode: keep
+    names:
+      StartUTC: drop
+      ClientUsername: drop
+      RequestPath: drop
+    headers:
+      defaultMode: drop
+      names:
+        CF-Connecting-IP: keep
+        X-Forwarded-For: keep
+        X-Forwarded-Proto: keep
+        X-Real-Ip: keep
+        Referer: keep
+        User-Agent: keep
+        Authorization: drop
+        Cookie: drop
+        Set-Cookie: drop
+api:
+  dashboard: true
+  insecure: false
+
+ping:
+  entryPoint: health

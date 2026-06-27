@@ -1,0 +1,20 @@
+---
+# Example users only; replace before exposing Authelia.
+# Generate Argon2id hashes with: docker run --rm authelia/authelia:4.39.15 authelia crypto hash generate argon2 --password '<PASSWORD>'
+
+users:
+  admin:
+    disabled: false
+    displayname: "Administrator"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$DnF/w/V/y/V/w/V/y/V/wA$DnF/w/V/y/V/w/V/y/V/wA$DnF/w/V/y/V/w/V/y/V/wA"
+    email: "admin@example.com"
+    groups:
+      - "admins"
+
+  user:
+    disabled: false
+    displayname: "User"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$DnF/w/V/y/V/w/V/y/V/wA$DnF/w/V/y/V/w/V/y/V/wA$DnF/w/V/y/V/w/V/y/V/wA"
+    email: "user@example.com"
+    groups:
+      - "users"

@@ -1,0 +1,46 @@
+http:
+  routers:
+    portainer:
+      rule: 'Host(`portainer.{{ env "DOMAIN" }}`)'
+      entryPoints:
+        - "web"
+      service: "portainer-service"
+      middlewares:
+        - "protected-chain"
+        - "portainer-csp"
+
+    unraid:
+      rule: 'Host(`unraid.{{ env "DOMAIN" }}`)'
+      entryPoints:
+        - "web"
+      service: "unraid-service"
+      middlewares:
+        - "protected-chain"
+
+    nas:
+      rule: 'Host(`nas.{{ env "DOMAIN" }}`)'
+      entryPoints:
+        - "web"
+      service: "nas-service"
+      middlewares:
+        - "protected-chain"
+        - "synology-csp"
+
+  services:
+    portainer-service:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: '{{ env "TRAEFIK_EXTERNAL_PORTAINER_URL" }}'
+
+    unraid-service:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: '{{ env "TRAEFIK_EXTERNAL_UNRAID_URL" }}'
+
+    nas-service:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: '{{ env "TRAEFIK_EXTERNAL_NAS_URL" }}'

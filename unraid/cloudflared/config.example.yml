@@ -1,0 +1,14 @@
+# Replace the tunnel identifier and credentials with real Cloudflare values.
+
+tunnel: 00000000-0000-0000-0000-000000000000
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: "*.example.com"
+    service: http://traefik:8080
+
+  - hostname: "example.com"
+    service: http://traefik:8080
+
+  # Keep unmatched hosts closed.
+  - service: http_status:404

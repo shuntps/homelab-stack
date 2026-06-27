@@ -1,0 +1,26 @@
+# Local environment and secrets
+.agents/
+.env
+**/.env
+
+# Cloudflare Tunnel secrets and local routing
+unraid/cloudflared/config.yml
+unraid/cloudflared/credentials.json
+
+# Authelia local identity and runtime state
+unraid/authelia/users_database.yml
+unraid/authelia/db.sqlite3
+unraid/authelia/notification.txt
+unraid/authelia/secrets/
+
+# Runtime data
+unraid/redis/
+unraid/vaultwarden/
+unraid/downloads/
+unraid/qbittorrent/qBittorrent/BT_backup/
+unraid/qbittorrent/qBittorrent/logs/
+unraid/qbittorrent/qBittorrent/rss/
+unraid/qbittorrent/qBittorrent/watched_folders.json
+
+# Windows metadata
+*Zone.Identifier*

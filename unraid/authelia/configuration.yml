@@ -1,0 +1,66 @@
+---
+theme: "dark"
+
+server:
+  address: "tcp://:9091/"
+  disable_healthcheck: false
+  endpoints:
+    authz:
+      forward-auth:
+        implementation: "ForwardAuth"
+  headers:
+    # Authelia's UI applies some dynamic inline styles; scripts remain same-origin/Cloudflare-only.
+    csp_template: "default-src 'self' https://static.cloudflareinsights.com; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; style-src 'self' 'unsafe-inline'; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+
+log:
+  level: "info"
+
+totp:
+  issuer: "{{ mustEnv `DOMAIN` }}"
+
+authentication_backend:
+  password_reset:
+    disable: false
+  refresh_interval: "5m"
+  file:
+    path: "/config/users_database.yml"
+
+access_control:
+  default_policy: "deny"
+  rules:
+    - domain: "auth.{{ mustEnv `DOMAIN` }}"
+      policy: "bypass"
+    # Browser manifest fetches do not reliably include auth cookies.
+    - domain: "traefik.{{ mustEnv `DOMAIN` }}"
+      resources:
+        - "^/dashboard/manifest\\.json$"
+      policy: "bypass"
+    - domain: "secure.{{ mustEnv `DOMAIN` }}"
+      policy: "two_factor"
+    - domain: "*.{{ mustEnv `DOMAIN` }}"
+      policy: "one_factor"
+
+session:
+  name: "authelia_session"
+  same_site: "strict"
+  expiration: "8h"
+  inactivity: "30m"
+  remember_me: -1
+  cookies:
+    - domain: "{{ mustEnv `DOMAIN` }}"
+      authelia_url: "https://auth.{{ mustEnv `DOMAIN` }}"
+      default_redirection_url: "https://traefik.{{ mustEnv `DOMAIN` }}"
+
+regulation:
+  max_retries: 3
+  find_time: "10m"
+  ban_time: "30m"
+
+storage:
+  encryption_key: "{{ mustEnv `AUTHELIA_STORAGE_ENCRYPTION_KEY` }}"
+  local:
+    path: "/config/db.sqlite3"
+
+notifier:
+  filesystem:
+    filename: "/config/notification.txt"

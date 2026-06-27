@@ -1,0 +1,253 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "1m"
+    max-file: "1"
+
+networks:
+  tunnel:
+    driver: "bridge"
+    name: homelab_tunnel
+    ipam:
+      config:
+        - subnet: 10.88.10.0/24
+  edge:
+    driver: "bridge"
+    name: homelab_edge
+  auth:
+    driver: "bridge"
+    name: homelab_auth
+    internal: true
+  docker_api:
+    driver: "bridge"
+    name: homelab_docker_api
+    internal: true
+  egress:
+    driver: "bridge"
+    name: homelab_egress
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2026.6.1
+    container_name: cloudflared
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - tunnel
+      - --config
+      - /etc/cloudflared/config.yml
+      - --metrics
+      - 127.0.0.1:2000
+      - run
+    volumes:
+      - ${CONFIG_PATH}/cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+      - ${CONFIG_PATH}/cloudflared/credentials.json:/etc/cloudflared/credentials.json:ro
+    networks:
+      tunnel: {}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "cloudflared",
+          "tunnel",
+          "--metrics",
+          "127.0.0.1:2000",
+          "ready",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *default-logging
+
+  # Cloudflare provides the DNS API; this small updater reconciles direct A records for non-HTTP services.
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:1.16.2
+    container_name: cloudflare-ddns
+    restart: unless-stopped
+    user: "${UID}:${GID}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: ${TZ}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_DDNS_API_TOKEN}
+      DOMAINS: ${CLOUDFLARE_DDNS_DOMAINS}
+      PROXIED: "false"
+      IP6_PROVIDER: "none"
+      UPDATE_CRON: ${CLOUDFLARE_DDNS_UPDATE_CRON}
+      RECORD_COMMENT: ${CLOUDFLARE_DDNS_RECORD_COMMENT}
+      EMOJI: "false"
+    networks:
+      egress: {}
+    logging: *default-logging
+
+  redis:
+    image: docker.io/valkey/valkey:8.1.8-alpine
+    container_name: redis_valkey
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - sh
+      - -c
+      - >
+        exec valkey-server
+        --port "$${REDIS_PORT}"
+        --requirepass "$${REDIS_PASSWORD}"
+        --appendonly no
+        --save ""
+        --maxmemory "$${REDIS_MAXMEMORY}"
+        --maxmemory-policy "$${REDIS_MAXMEMORY_POLICY}"
+    environment:
+      TZ: ${TZ}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY}
+      REDIS_MAXMEMORY_POLICY: ${REDIS_MAXMEMORY_POLICY}
+    networks:
+      auth: {}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" valkey-cli -p \"$${REDIS_PORT}\" --no-auth-warning -e ping",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+
+  # Traefik reads Docker metadata through this constrained proxy instead of mounting the Docker socket directly.
+  docker-socket-proxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:v0.4.2
+    container_name: docker-socket-proxy
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      LOG_LEVEL: warning
+      # Required by Traefik Docker provider in standalone Docker mode.
+      CONTAINERS: "1"
+      EVENTS: "1"
+      NETWORKS: "1"
+      PING: "1"
+      VERSION: "1"
+      # Keep the Docker API read-only through the proxy.
+      POST: "0"
+      AUTH: "0"
+      SECRETS: "0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    tmpfs:
+      - /run
+      - /tmp
+      - /var/lib/haproxy
+    networks:
+      docker_api: {}
+    logging: *default-logging
+
+  traefik:
+    image: traefik:v3.7.5
+    container_name: traefik
+    restart: unless-stopped
+    read_only: true
+    depends_on:
+      docker-socket-proxy:
+        condition: service_started
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: ${TZ}
+      DOMAIN: ${DOMAIN}
+      TRAEFIK_EXTERNAL_PORTAINER_URL: ${TRAEFIK_EXTERNAL_PORTAINER_URL}
+      TRAEFIK_EXTERNAL_UNRAID_URL: ${TRAEFIK_EXTERNAL_UNRAID_URL}
+      TRAEFIK_EXTERNAL_NAS_URL: ${TRAEFIK_EXTERNAL_NAS_URL}
+    volumes:
+      - ${CONFIG_PATH}/traefik:/etc/traefik:ro
+    tmpfs:
+      - /tmp
+    networks:
+      tunnel: {}
+      edge: {}
+      docker_api: {}
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.api.rule: "Host(`traefik.${DOMAIN}`)"
+      traefik.http.routers.api.entrypoints: "web"
+      traefik.http.routers.api.service: "api@internal"
+      traefik.http.routers.api.middlewares: "protected-chain@file"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "traefik",
+          "healthcheck",
+          "--ping",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+
+  authelia:
+    image: authelia/authelia:4.39.15
+    container_name: authelia
+    restart: unless-stopped
+    command:
+      - authelia
+      - --config
+      - /config/configuration.yml
+      - --config.experimental.filters
+      - template
+    depends_on:
+      redis:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: ${TZ}
+      DOMAIN: ${DOMAIN}
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET: ${AUTHELIA_RESET_PASSWORD_JWT_SECRET}
+      AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
+      AUTHELIA_STORAGE_ENCRYPTION_KEY: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+      AUTHELIA_SESSION_REDIS_HOST: redis_valkey
+      AUTHELIA_SESSION_REDIS_PORT: ${REDIS_PORT}
+      AUTHELIA_SESSION_REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - ${CONFIG_PATH}/authelia:/config
+    networks:
+      auth: {}
+      edge: {}
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.authelia.rule: "Host(`auth.${DOMAIN}`)"
+      traefik.http.routers.authelia.entrypoints: "web"
+      traefik.http.routers.authelia.middlewares: "default-chain@file"
+      traefik.http.services.authelia.loadbalancer.server.port: 9091
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/app/healthcheck.sh",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
