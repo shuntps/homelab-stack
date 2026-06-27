@@ -1,5 +1,6 @@
 # Local environment and secrets
 .agents/
+.github/
 .env
 **/.env
 
@@ -11,6 +12,7 @@ unraid/cloudflared/credentials.json
 unraid/authelia/users_database.yml
 unraid/authelia/db.sqlite3
 unraid/authelia/notification.txt
+unraid/authelia/data/
 unraid/authelia/secrets/
 
 # Runtime data

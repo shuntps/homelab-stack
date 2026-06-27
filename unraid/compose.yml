@@ -148,6 +148,16 @@ services:
       - /var/lib/haproxy
     networks:
       docker_api: {}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://127.0.0.1:2375/_ping",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     logging: *default-logging
 
   traefik:
@@ -157,7 +167,7 @@ services:
     read_only: true
     depends_on:
       docker-socket-proxy:
-        condition: service_started
+        condition: service_healthy
     cap_drop:
       - ALL
     security_opt:
@@ -200,6 +210,7 @@ services:
     image: authelia/authelia:4.39.15
     container_name: authelia
     restart: unless-stopped
+    user: "${UID}:${GID}"
     command:
       - authelia
       - --config
@@ -209,6 +220,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    cap_drop:
+      - ALL
     security_opt:
       - no-new-privileges:true
     environment:
@@ -221,7 +234,11 @@ services:
       AUTHELIA_SESSION_REDIS_PORT: ${REDIS_PORT}
       AUTHELIA_SESSION_REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
-      - ${CONFIG_PATH}/authelia:/config
+      - ${CONFIG_PATH}/authelia/configuration.yml:/config/configuration.yml:ro
+      - ${CONFIG_PATH}/authelia/users_database.yml:/config/users_database.yml:ro
+      - ${CONFIG_PATH}/authelia/data:/data
+    tmpfs:
+      - /tmp
     networks:
       auth: {}
       edge: {}

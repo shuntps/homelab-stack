@@ -52,6 +52,8 @@ cp authelia/users_database.example.yml authelia/users_database.yml
 
 Then replace all example values with real local values.
 
+Create `authelia/data/` in your configured appdata path and make it writable by `UID:GID` from `.env`.
+
 Never commit:
 
 - `unraid/.env`
@@ -59,6 +61,8 @@ Never commit:
 - `unraid/cloudflared/credentials.json`
 - `unraid/authelia/users_database.yml`
 - Authelia database, notification, secret, and runtime data files
+
+Authelia runtime data is expected under `authelia/data/` in your configured appdata path.
 
 ## Usage
 
@@ -80,7 +84,9 @@ Authelia configuration:
 
 ```bash
 docker run --rm --entrypoint authelia \
-  -v "$PWD/authelia:/config:ro" \
+  -v "$PWD/authelia/configuration.yml:/config/configuration.yml:ro" \
+  -v "$PWD/authelia/users_database.example.yml:/config/users_database.yml:ro" \
+  --tmpfs /data \
   -e DOMAIN=example.com \
   -e AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET=replace_with_random_reset_jwt_secret \
   -e AUTHELIA_SESSION_SECRET=replace_with_random_session_secret \
