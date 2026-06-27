@@ -79,7 +79,6 @@ services:
       TZ: ${TZ}
       CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_DDNS_API_TOKEN}
       DOMAINS: ${CLOUDFLARE_DDNS_DOMAINS}
-      PROXIED: "false"
       IP6_PROVIDER: "none"
       UPDATE_CRON: ${CLOUDFLARE_DDNS_UPDATE_CRON}
       RECORD_COMMENT: ${CLOUDFLARE_DDNS_RECORD_COMMENT}
@@ -104,7 +103,6 @@ services:
         exec valkey-server
         --port "$${REDIS_PORT}"
         --requirepass "$${REDIS_PASSWORD}"
-        --appendonly no
         --save ""
         --maxmemory "$${REDIS_MAXMEMORY}"
         --maxmemory-policy "$${REDIS_MAXMEMORY_POLICY}"
@@ -141,14 +139,7 @@ services:
       LOG_LEVEL: warning
       # Required by Traefik Docker provider in standalone Docker mode.
       CONTAINERS: "1"
-      EVENTS: "1"
       NETWORKS: "1"
-      PING: "1"
-      VERSION: "1"
-      # Keep the Docker API read-only through the proxy.
-      POST: "0"
-      AUTH: "0"
-      SECRETS: "0"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     tmpfs:
