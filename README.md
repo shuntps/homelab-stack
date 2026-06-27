@@ -18,14 +18,19 @@ This repository contains the public-safe configuration templates for a homelab c
 - Authelia for authentication.
 - Valkey as Redis-compatible session storage.
 - Docker Socket Proxy for constrained Docker API access.
+- Vaultwarden for password management.
+- Pi-hole for LAN DNS filtering.
 
 The real local configuration is intentionally kept out of Git. Public files use safe examples, while private files are ignored by `.gitignore`.
+
+Infrastructure services live in `unraid/compose.yml`; application services that depend on the shared edge network live in `unraid/compose_app.yml`.
 
 ## Layout
 
 ```text
 unraid/
   compose.yml
+  compose_app.yml
   .env.example
   authelia/
     configuration.yml
@@ -62,20 +67,22 @@ Never commit:
 - `unraid/authelia/users_database.yml`
 - Authelia database, notification, secret, and runtime data files
 
-Authelia runtime data is expected under `authelia/data/` in your configured appdata path.
+Authelia runtime data is expected under `authelia/data/` in your configured appdata path. Vaultwarden and Pi-hole persistent data are also expected under the configured appdata path and should stay out of Git.
 
 ## Usage
 
-Start the core stack from the `unraid/` directory:
+Start the core stack from the `unraid/` directory first, then start the app stack:
 
 ```bash
-docker compose up -d
+docker compose -f compose.yml up -d
+docker compose -f compose_app.yml up -d
 ```
 
 Validate the rendered Compose configuration:
 
 ```bash
-docker compose config --quiet
+docker compose -f compose.yml config --quiet
+docker compose -f compose_app.yml config --quiet
 ```
 
 ## Validation
@@ -88,6 +95,8 @@ docker run --rm --entrypoint authelia \
   -v "$PWD/authelia/users_database.example.yml:/config/users_database.yml:ro" \
   --tmpfs /data \
   -e DOMAIN=example.com \
+  -e VAULTWARDEN_SUBDOMAIN=vault \
+  -e PIHOLE_SUBDOMAIN=pihole \
   -e AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET=replace_with_random_reset_jwt_secret \
   -e AUTHELIA_SESSION_SECRET=replace_with_random_session_secret \
   -e AUTHELIA_STORAGE_ENCRYPTION_KEY=replace_with_random_storage_encryption_key \

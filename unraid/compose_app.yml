@@ -1,0 +1,124 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "1m"
+    max-file: "1"
+
+networks:
+  edge:
+    external: true
+    name: homelab_edge
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.36.0
+    container_name: vaultwarden
+    restart: unless-stopped
+    user: "${UID}:${GID}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: ${TZ}
+      DOMAIN: "https://${VAULTWARDEN_SUBDOMAIN}.${DOMAIN}"
+      ROCKET_ADDRESS: "0.0.0.0"
+      ROCKET_PORT: "8080"
+      # Enable only for first-account bootstrap, then keep disabled.
+      SIGNUPS_ALLOWED: ${VAULTWARDEN_SIGNUPS_ALLOWED}
+      INVITATIONS_ALLOWED: ${VAULTWARDEN_INVITATIONS_ALLOWED}
+      ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN}
+      IP_HEADER: "CF-Connecting-IP"
+    volumes:
+      - ${CONFIG_PATH}/vaultwarden:/data
+    tmpfs:
+      - /tmp
+    networks:
+      edge: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: homelab_edge
+      traefik.http.routers.vaultwarden.rule: "Host(`${VAULTWARDEN_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.vaultwarden.entrypoints: "web"
+      traefik.http.routers.vaultwarden.middlewares: "default-chain@file,rate-limit@file"
+      traefik.http.routers.vaultwarden.service: "vaultwarden"
+      traefik.http.routers.vaultwarden-admin.rule: "Host(`${VAULTWARDEN_SUBDOMAIN}.${DOMAIN}`) && (Path(`/admin`) || PathPrefix(`/admin/`))"
+      traefik.http.routers.vaultwarden-admin.entrypoints: "web"
+      traefik.http.routers.vaultwarden-admin.middlewares: "protected-chain@file,rate-limit@file"
+      traefik.http.routers.vaultwarden-admin.priority: "100"
+      traefik.http.routers.vaultwarden-admin.service: "vaultwarden"
+      traefik.http.services.vaultwarden.loadbalancer.server.port: 8080
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:8080/alive >/dev/null",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging: *default-logging
+
+  pihole:
+    image: pihole/pihole:2026.06.0
+    container_name: pihole
+    hostname: pihole
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    # Pi-hole FTL needs these when Docker's default capabilities are dropped.
+    cap_add:
+      - NET_BIND_SERVICE
+      - NET_RAW
+      - NET_ADMIN
+      - SYS_NICE
+      - CHOWN
+      - SYS_TIME
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+      - SETFCAP
+      - FOWNER
+    # Pi-hole applies file capabilities before FTL drops to PIHOLE_UID; no-new-privileges would block that path.
+    environment:
+      TZ: ${TZ}
+      TAIL_FTL_LOG: "1"
+      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD}
+      FTLCONF_dns_listeningMode: "ALL"
+      FTLCONF_dns_upstreams: "1.1.1.1;8.8.8.8"
+      FTLCONF_ntp_ipv4_active: "false"
+      FTLCONF_ntp_ipv6_active: "false"
+      PIHOLE_UID: ${UID}
+      PIHOLE_GID: ${GID}
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    volumes:
+      - ${CONFIG_PATH}/pihole/etc-pihole:/etc/pihole
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    networks:
+      edge: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: homelab_edge
+      traefik.http.routers.pihole.rule: "Host(`${PIHOLE_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.pihole.entrypoints: "web"
+      traefik.http.routers.pihole.middlewares: "pihole-chain@file,rate-limit@file"
+      traefik.http.routers.pihole.service: "pihole"
+      traefik.http.services.pihole.loadbalancer.server.port: 80
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1/admin/ >/dev/null",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging: *default-logging
+

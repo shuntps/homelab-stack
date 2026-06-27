@@ -18,11 +18,7 @@ unraid/authelia/secrets/
 # Runtime data
 unraid/redis/
 unraid/vaultwarden/
-unraid/downloads/
-unraid/qbittorrent/qBittorrent/BT_backup/
-unraid/qbittorrent/qBittorrent/logs/
-unraid/qbittorrent/qBittorrent/rss/
-unraid/qbittorrent/qBittorrent/watched_folders.json
+unraid/pihole/
 
 # Windows metadata
 *Zone.Identifier*

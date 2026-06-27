@@ -35,7 +35,13 @@ access_control:
       resources:
         - "^/dashboard/manifest\\.json$"
       policy: "bypass"
-    - domain: "secure.{{ mustEnv `DOMAIN` }}"
+    - domain: "{{ mustEnv `VAULTWARDEN_SUBDOMAIN` }}.{{ mustEnv `DOMAIN` }}"
+      resources:
+        - "^/admin(?:/.*)?$"
+      policy: "two_factor"
+    - domain: "{{ mustEnv `PIHOLE_SUBDOMAIN` }}.{{ mustEnv `DOMAIN` }}"
+      resources:
+        - "^/admin(?:/.*)?$"
       policy: "two_factor"
     - domain: "*.{{ mustEnv `DOMAIN` }}"
       policy: "one_factor"

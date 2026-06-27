@@ -17,19 +17,6 @@ entryPoints:
       lifeCycle:
         graceTimeOut: "30s"
 
-  websecure:
-    address: ":8443"
-    forwardedHeaders:
-      trustedIPs:
-        - "10.88.10.0/24"
-    transport:
-      respondingTimeouts:
-        readTimeout: "60s"
-        writeTimeout: "0s"
-        idleTimeout: "180s"
-      lifeCycle:
-        graceTimeOut: "30s"
-
   health:
     address: ":8082"
 

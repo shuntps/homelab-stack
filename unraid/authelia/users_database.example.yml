@@ -6,7 +6,7 @@ users:
   admin:
     disabled: false
     displayname: "Administrator"
-    password: "$argon2id$v=19$m=65536,t=3,p=4$DnF/w/V/y/V/w/V/y/V/wA$DnF/w/V/y/V/w/V/y/V/wA$DnF/w/V/y/V/w/V/y/V/wA"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$VGbTbPiw2VAYuk2fr3GeMA$9V6rVKNVsNrM3I+K4eilI8RfEgfwxsSzDz7CUfGy2No"
     email: "admin@example.com"
     groups:
       - "admins"
@@ -14,7 +14,7 @@ users:
   user:
     disabled: false
     displayname: "User"
-    password: "$argon2id$v=19$m=65536,t=3,p=4$DnF/w/V/y/V/w/V/y/V/wA$DnF/w/V/y/V/w/V/y/V/wA$DnF/w/V/y/V/w/V/y/V/wA"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$VGbTbPiw2VAYuk2fr3GeMA$9V6rVKNVsNrM3I+K4eilI8RfEgfwxsSzDz7CUfGy2No"
     email: "user@example.com"
     groups:
       - "users"
