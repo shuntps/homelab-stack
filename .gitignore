@@ -19,6 +19,8 @@ core/config/authelia/secrets/
 /redis/
 /vaultwarden/
 /pihole/
+/downloads/
+/media/
 
 # Windows metadata
 *Zone.Identifier*

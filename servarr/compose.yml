@@ -1,0 +1,263 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "3"
+
+x-linuxserver-env: &linuxserver-env
+  PUID: ${UID}
+  PGID: ${GID}
+  TZ: ${TZ}
+
+networks:
+  edge:
+    external: true
+    name: homelab_edge
+  media:
+    name: homelab_media
+
+services:
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      <<: *linuxserver-env
+      WEBUI_PORT: ${QBITTORRENT_WEBUI_PORT}
+      TORRENTING_PORT: ${QBITTORRENT_PEER_PORT}
+    volumes:
+      - ${CONFIG_PATH}/servarr/qbittorrent:/config
+      - ${DOWNLOADS_PATH}:/downloads
+    ports:
+      - "${QBITTORRENT_PEER_PORT}:${QBITTORRENT_PEER_PORT}/tcp"
+      - "${QBITTORRENT_PEER_PORT}:${QBITTORRENT_PEER_PORT}/udp"
+    networks:
+      edge: {}
+      media: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: homelab_edge
+      traefik.http.routers.qbittorrent.rule: "Host(`${QBITTORRENT_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.qbittorrent.entrypoints: "web"
+      traefik.http.routers.qbittorrent.middlewares: "protected-chain@file,rate-limit@file"
+      traefik.http.routers.qbittorrent.service: "qbittorrent"
+      traefik.http.services.qbittorrent.loadbalancer.server.port: "${QBITTORRENT_WEBUI_PORT}"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:${QBITTORRENT_WEBUI_PORT}/ >/dev/null",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging: *default-logging
+
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      <<: *linuxserver-env
+      VERSION: docker
+      PLEX_CLAIM: ${PLEX_CLAIM}
+      ADVERTISE_IP: ${PLEX_ADVERTISE_URL}
+      UMASK: 022
+    volumes:
+      - ${CONFIG_PATH}/servarr/plex:/config
+      - ${DATA_PATH}:/media:slave
+    network_mode: host
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:32400/identity >/dev/null",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    logging: *default-logging
+
+  xteve:
+    image: dnsforge/xteve:latest
+    container_name: xteve
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: ${TZ}
+      XTEVE_API: 0
+      XTEVE_PORT: 34400
+    volumes:
+      - ${CONFIG_PATH}/servarr/xteve/conf:/home/xteve/conf
+      - ${CONFIG_PATH}/servarr/xteve/guide2go:/home/xteve/guide2go/conf
+      - ${CONFIG_PATH}/servarr/xteve/temp:/tmp/xteve
+    networks:
+      edge: {}
+      media: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: homelab_edge
+      traefik.http.routers.xteve.rule: "Host(`${XTEVE_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.xteve.entrypoints: "web"
+      traefik.http.routers.xteve.middlewares: "protected-chain@file,rate-limit@file"
+      traefik.http.routers.xteve.service: "xteve"
+      traefik.http.services.xteve.loadbalancer.server.port: 34400
+    logging: *default-logging
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      <<: *linuxserver-env
+    volumes:
+      - ${CONFIG_PATH}/servarr/prowlarr:/config
+    networks:
+      edge: {}
+      media: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: homelab_edge
+      traefik.http.routers.prowlarr.rule: "Host(`${PROWLARR_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.prowlarr.entrypoints: "web"
+      traefik.http.routers.prowlarr.middlewares: "protected-chain@file,rate-limit@file"
+      traefik.http.routers.prowlarr.service: "prowlarr"
+      traefik.http.services.prowlarr.loadbalancer.server.port: 9696
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:9696/ping >/dev/null",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging: *default-logging
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      <<: *linuxserver-env
+    volumes:
+      - ${CONFIG_PATH}/servarr/radarr:/config
+      - ${DOWNLOADS_PATH}:/downloads
+      - ${DATA_PATH}/media/movies:/movies
+    networks:
+      edge: {}
+      media: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: homelab_edge
+      traefik.http.routers.radarr.rule: "Host(`${RADARR_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.radarr.entrypoints: "web"
+      traefik.http.routers.radarr.middlewares: "protected-chain@file,rate-limit@file"
+      traefik.http.routers.radarr.service: "radarr"
+      traefik.http.services.radarr.loadbalancer.server.port: 7878
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:7878/ping >/dev/null",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging: *default-logging
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      <<: *linuxserver-env
+    volumes:
+      - ${CONFIG_PATH}/servarr/sonarr:/config
+      - ${DOWNLOADS_PATH}:/downloads
+      - ${DATA_PATH}/media/series:/series
+    networks:
+      edge: {}
+      media: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: homelab_edge
+      traefik.http.routers.sonarr.rule: "Host(`${SONARR_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.sonarr.entrypoints: "web"
+      traefik.http.routers.sonarr.middlewares: "protected-chain@file,rate-limit@file"
+      traefik.http.routers.sonarr.service: "sonarr"
+      traefik.http.services.sonarr.loadbalancer.server.port: 8989
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:8989/ping >/dev/null",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging: *default-logging
+
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      <<: *linuxserver-env
+    volumes:
+      - ${CONFIG_PATH}/servarr/overseerr:/config
+    networks:
+      edge: {}
+      media: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: homelab_edge
+      traefik.http.routers.overseerr.rule: "Host(`${OVERSEERR_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.overseerr.entrypoints: "web"
+      traefik.http.routers.overseerr.middlewares: "protected-chain@file,rate-limit@file"
+      traefik.http.routers.overseerr.service: "overseerr"
+      traefik.http.services.overseerr.loadbalancer.server.port: 5055
+    logging: *default-logging
+
+  profilarr:
+    image: ghcr.io/dictionarry-hub/profilarr:latest
+    container_name: profilarr
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: ${TZ}
+      HOST: "0.0.0.0"
+      PORT: "6868"
+    volumes:
+      - ${CONFIG_PATH}/servarr/profilarr:/config
+    networks:
+      edge: {}
+      media: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: homelab_edge
+      traefik.http.routers.profilarr.rule: "Host(`${PROFILARR_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.profilarr.entrypoints: "web"
+      traefik.http.routers.profilarr.middlewares: "protected-chain@file,rate-limit@file"
+      traefik.http.routers.profilarr.service: "profilarr"
+      traefik.http.services.profilarr.loadbalancer.server.port: 6868
+    logging: *default-logging
