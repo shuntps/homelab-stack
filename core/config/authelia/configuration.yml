@@ -25,21 +25,26 @@ authentication_backend:
   file:
     path: "/config/users_database.yml"
 
+identity_validation:
+  reset_password:
+    jwt_secret: "{{ mustEnv `AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET` }}"
+
 access_control:
   default_policy: "deny"
   rules:
-    - domain: "auth.{{ mustEnv `DOMAIN` }}"
+    - domain: "{{ mustEnv `AUTH_SUBDOMAIN` }}.{{ mustEnv `DOMAIN` }}"
       policy: "bypass"
     # Browser manifest fetches do not reliably include auth cookies.
-    - domain: "traefik.{{ mustEnv `DOMAIN` }}"
+    - domain: "{{ mustEnv `TRAEFIK_SUBDOMAIN` }}.{{ mustEnv `DOMAIN` }}"
       resources:
         - "^/dashboard/manifest\\.json$"
       policy: "bypass"
-    - domain: "{{ mustEnv `VAULTWARDEN_SUBDOMAIN` }}.{{ mustEnv `DOMAIN` }}"
+    # Browser metadata fetches do not reliably include auth cookies.
+    - domain: "*.{{ mustEnv `DOMAIN` }}"
       resources:
-        - "^/admin(?:/.*)?$"
-      policy: "two_factor"
-    - domain: "{{ mustEnv `PIHOLE_SUBDOMAIN` }}.{{ mustEnv `DOMAIN` }}"
+        - "^/admin/img/favicons/(?:manifest\\.json|.*\\.(?:png|svg|ico))$"
+      policy: "bypass"
+    - domain: "*.{{ mustEnv `DOMAIN` }}"
       resources:
         - "^/admin(?:/.*)?$"
       policy: "two_factor"
@@ -48,14 +53,15 @@ access_control:
 
 session:
   name: "authelia_session"
+  secret: "{{ mustEnv `AUTHELIA_SESSION_SECRET` }}"
   same_site: "strict"
   expiration: "8h"
   inactivity: "30m"
   remember_me: -1
   cookies:
     - domain: "{{ mustEnv `DOMAIN` }}"
-      authelia_url: "https://auth.{{ mustEnv `DOMAIN` }}"
-      default_redirection_url: "https://traefik.{{ mustEnv `DOMAIN` }}"
+      authelia_url: "https://{{ mustEnv `AUTH_SUBDOMAIN` }}.{{ mustEnv `DOMAIN` }}"
+      default_redirection_url: "https://{{ mustEnv `TRAEFIK_SUBDOMAIN` }}.{{ mustEnv `DOMAIN` }}"
 
 regulation:
   max_retries: 3

@@ -26,12 +26,12 @@ providers:
     exposedByDefault: false
     network: homelab_edge
   file:
-    directory: /etc/traefik/config
+    directory: "/etc/traefik/config"
     watch: true
 
 log:
-  level: INFO
-  format: json
+  level: "INFO"
+  format: "json"
 
 accessLog:
   format: json

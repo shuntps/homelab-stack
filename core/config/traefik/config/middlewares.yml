@@ -19,9 +19,24 @@ http:
           X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive"
           X-XSS-Protection: "0"
 
+    # Use when the upstream app already owns CSP, frame, referrer, and permissions headers.
+    upstream-app-headers:
+      headers:
+        sslRedirect: true
+        sslProxyHeaders:
+          X-Forwarded-Proto: "https"
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: false
+        forceSTSHeader: true
+        customResponseHeaders:
+          Server: ""
+          X-Powered-By: ""
+          X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive"
+
     authelia:
       forwardAuth:
-        address: 'http://authelia:9091/api/authz/forward-auth?rd=https://auth.{{ env "DOMAIN" }}/'
+        address: 'http://authelia:9091/api/authz/forward-auth?rd=https://{{ env "AUTH_SUBDOMAIN" }}.{{ env "DOMAIN" }}/'
         trustForwardHeader: true
         maxResponseBodySize: 8192
         authResponseHeaders:
@@ -41,6 +56,17 @@ http:
           - "authelia"
           - "security-headers"
 
+    upstream-app-chain:
+      chain:
+        middlewares:
+          - "upstream-app-headers"
+
+    upstream-app-protected-chain:
+      chain:
+        middlewares:
+          - "authelia"
+          - "upstream-app-headers"
+
     rate-limit:
       rateLimit:
         average: 100
@@ -59,7 +85,7 @@ http:
           Content-Security-Policy: "script-src 'self' cdn.matomo.cloud js.hsforms.net https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://static.cloudflareinsights.com https://cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; object-src 'none'; frame-ancestors 'none'; frame-src https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/"
           Permissions-Policy: "accelerometer=(), camera=(), microphone=(), geolocation=(), gyroscope=(), magnetometer=(), usb=(), payment=(), picture-in-picture=()"
 
-    # Pi-hole admin interface needs permissive CSP for chart.js and Vue.js assets.
+    # Pi-hole ships a strict CSP; this keeps it strict while allowing Cloudflare Insights.
     pihole-csp:
       headers:
         sslRedirect: true
@@ -78,7 +104,7 @@ http:
           X-Powered-By: ""
           X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive"
           X-XSS-Protection: "0"
-          Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'self'; object-src 'none';"
+          Content-Security-Policy: "default-src 'none'; connect-src 'self' https://cloudflareinsights.com; font-src 'self'; frame-ancestors 'none'; img-src 'self'; manifest-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; form-action 'self'; object-src 'none'; base-uri 'self';"
 
     pihole-chain:
       chain:

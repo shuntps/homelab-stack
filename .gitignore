@@ -1,24 +1,24 @@
 # Local environment and secrets
 .agents/
-.github/
 .env
 **/.env
+env/common.env
 
 # Cloudflare Tunnel secrets and local routing
-unraid/cloudflared/config.yml
-unraid/cloudflared/credentials.json
+core/config/cloudflared/config.yml
+core/config/cloudflared/credentials.json
 
 # Authelia local identity and runtime state
-unraid/authelia/users_database.yml
-unraid/authelia/db.sqlite3
-unraid/authelia/notification.txt
-unraid/authelia/data/
-unraid/authelia/secrets/
+core/config/authelia/users_database.yml
+core/config/authelia/db.sqlite3
+core/config/authelia/notification.txt
+core/config/authelia/data/
+core/config/authelia/secrets/
 
 # Runtime data
-unraid/redis/
-unraid/vaultwarden/
-unraid/pihole/
+/redis/
+/vaultwarden/
+/pihole/
 
 # Windows metadata
 *Zone.Identifier*

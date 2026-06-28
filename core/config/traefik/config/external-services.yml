@@ -1,7 +1,7 @@
 http:
   routers:
     portainer:
-      rule: 'Host(`portainer.{{ env "DOMAIN" }}`)'
+      rule: 'Host(`{{ env "PORTAINER_SUBDOMAIN" }}.{{ env "DOMAIN" }}`)'
       entryPoints:
         - "web"
       service: "portainer-service"
@@ -9,16 +9,16 @@ http:
         - "protected-chain"
         - "portainer-csp"
 
-    unraid:
-      rule: 'Host(`unraid.{{ env "DOMAIN" }}`)'
+    server:
+      rule: 'Host(`{{ env "SERVER_SUBDOMAIN" }}.{{ env "DOMAIN" }}`)'
       entryPoints:
         - "web"
-      service: "unraid-service"
+      service: "server-service"
       middlewares:
         - "protected-chain"
 
     nas:
-      rule: 'Host(`nas.{{ env "DOMAIN" }}`)'
+      rule: 'Host(`{{ env "NAS_SUBDOMAIN" }}.{{ env "DOMAIN" }}`)'
       entryPoints:
         - "web"
       service: "nas-service"
@@ -33,11 +33,11 @@ http:
         servers:
           - url: '{{ env "TRAEFIK_EXTERNAL_PORTAINER_URL" }}'
 
-    unraid-service:
+    server-service:
       loadBalancer:
         passHostHeader: true
         servers:
-          - url: '{{ env "TRAEFIK_EXTERNAL_UNRAID_URL" }}'
+          - url: '{{ env "TRAEFIK_EXTERNAL_SERVER_URL" }}'
 
     nas-service:
       loadBalancer:
