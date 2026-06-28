@@ -155,7 +155,7 @@ services:
     volumes:
       - ${CONFIG_PATH}/servarr/radarr:/config
       - ${DOWNLOADS_PATH}:/downloads
-      - ${DATA_PATH}/media/movies:/movies
+      - ${DATA_PATH}:/media:slave
     networks:
       edge: {}
       media: {}
@@ -190,7 +190,7 @@ services:
     volumes:
       - ${CONFIG_PATH}/servarr/sonarr:/config
       - ${DOWNLOADS_PATH}:/downloads
-      - ${DATA_PATH}/media/series:/series
+      - ${DATA_PATH}:/media:slave
     networks:
       edge: {}
       media: {}
@@ -214,27 +214,34 @@ services:
       start_period: 60s
     logging: *default-logging
 
-  overseerr:
-    image: lscr.io/linuxserver/overseerr:latest
-    container_name: overseerr
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
     environment:
       <<: *linuxserver-env
+      LOG_LEVEL: info
     volumes:
-      - ${CONFIG_PATH}/servarr/overseerr:/config
+      - ${CONFIG_PATH}/servarr/seerr:/app/config
     networks:
       edge: {}
       media: {}
     labels:
       traefik.enable: "true"
       traefik.docker.network: homelab_edge
-      traefik.http.routers.overseerr.rule: "Host(`${OVERSEERR_SUBDOMAIN}.${DOMAIN}`)"
-      traefik.http.routers.overseerr.entrypoints: "web"
-      traefik.http.routers.overseerr.middlewares: "protected-chain@file,rate-limit@file"
-      traefik.http.routers.overseerr.service: "overseerr"
-      traefik.http.services.overseerr.loadbalancer.server.port: 5055
+      traefik.http.routers.seerr.rule: "Host(`${SEERR_SUBDOMAIN}.${DOMAIN}`)"
+      traefik.http.routers.seerr.entrypoints: "web"
+      traefik.http.routers.seerr.middlewares: "protected-chain@file,rate-limit@file"
+      traefik.http.routers.seerr.service: "seerr"
+      traefik.http.services.seerr.loadbalancer.server.port: 5055
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
+      start_period: 20s
+      timeout: 3s
+      interval: 15s
+      retries: 3
     logging: *default-logging
 
   profilarr:
@@ -244,9 +251,8 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      TZ: ${TZ}
-      HOST: "0.0.0.0"
-      PORT: "6868"
+      <<: *linuxserver-env
+      ORIGIN: https://${PROFILARR_SUBDOMAIN}.${DOMAIN}
     volumes:
       - ${CONFIG_PATH}/servarr/profilarr:/config
     networks:
