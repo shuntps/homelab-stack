@@ -84,6 +84,19 @@ services:
       start_period: 60s
     logging: *default-logging
 
+  doh-proxy:
+    image: adguard/dnsproxy:latest
+    container_name: doh-proxy
+    command:
+      - --listen=0.0.0.0
+      - --port=5053
+      - --upstream=https://1.1.1.1/dns-query
+      - --upstream=https://1.0.0.1/dns-query
+      - --bootstrap=8.8.8.8:53
+    networks:
+      edge: {}
+    restart: unless-stopped
+
   vaultwarden:
     image: vaultwarden/server:1.36.0
     container_name: vaultwarden
@@ -104,6 +117,8 @@ services:
       INVITATIONS_ALLOWED: ${VAULTWARDEN_INVITATIONS_ALLOWED}
       ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN}
       IP_HEADER: "CF-Connecting-IP"
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     volumes:
       - ${CONFIG_PATH}/vaultwarden:/data
     tmpfs:
@@ -115,11 +130,11 @@ services:
       traefik.docker.network: homelab_edge
       traefik.http.routers.vaultwarden.rule: "Host(`${VAULTWARDEN_SUBDOMAIN}.${DOMAIN}`)"
       traefik.http.routers.vaultwarden.entrypoints: "web"
-      traefik.http.routers.vaultwarden.middlewares: "upstream-app-chain@file,rate-limit@file"
+      traefik.http.routers.vaultwarden.middlewares: "upstream-app-chain@file,vaultwarden-custom-headers@file,rate-limit@file"
       traefik.http.routers.vaultwarden.service: "vaultwarden"
       traefik.http.routers.vaultwarden-admin.rule: "Host(`${VAULTWARDEN_SUBDOMAIN}.${DOMAIN}`) && (Path(`/admin`) || PathPrefix(`/admin/`))"
       traefik.http.routers.vaultwarden-admin.entrypoints: "web"
-      traefik.http.routers.vaultwarden-admin.middlewares: "upstream-app-protected-chain@file,rate-limit@file"
+      traefik.http.routers.vaultwarden-admin.middlewares: "upstream-app-protected-chain@file,vaultwarden-custom-headers@file,rate-limit@file"
       traefik.http.routers.vaultwarden-admin.priority: "100"
       traefik.http.routers.vaultwarden-admin.service: "vaultwarden"
       traefik.http.services.vaultwarden.loadbalancer.server.port: 8080

@@ -15,11 +15,12 @@ This repository contains public-safe configuration templates for a homelab stack
 - Cloudflare Tunnel for inbound HTTP routing.
 - Cloudflare DDNS for direct DNS records.
 - Traefik as the internal reverse proxy.
+- AdGuard DNS Proxy for DNS-over-HTTPS (DoH).
 - Authelia for authentication.
 - Valkey as Redis-compatible session storage.
 - Docker Socket Proxy for constrained Docker API access.
 - Vaultwarden for password management.
-- Pi-hole for LAN DNS filtering.
+- Pi-hole for LAN DNS filtering (using AdGuard DNS Proxy as upstream).
 - Servarr media automation with qBittorrent, Plex, xTeVe, Prowlarr, Radarr, Sonarr, Overseerr, and Profilarr.
 
 The real local configuration is intentionally kept out of Git. Public files use safe examples, while private files are ignored by `.gitignore`.
@@ -87,6 +88,8 @@ Never commit:
 
 Authelia runtime data is expected under `authelia/data/` in your configured appdata path. Vaultwarden and Pi-hole persistent data are also expected under the configured appdata path and should stay out of Git.
 
+All internal services (except those that circumvent Docker networks, like Plex in host mode) are now configured to use Pi-hole as their primary DNS via `PIHOLE_DNS_BIND_IP`, ensuring internal telemetry filtering and upstream privacy via DoH.
+
 Pi-hole Docker settings are managed through `FTLCONF_` environment variables in `apps/compose.yml`. Generated Pi-hole files such as `pihole.toml`, `dnsmasq.conf`, local hosts, and real list exports should stay private.
 
 Servarr downloads and media paths should stay on the same storage pool when possible. This keeps Radarr and Sonarr imports fast and allows hardlinks instead of copy-heavy moves.
@@ -96,6 +99,8 @@ Before the first Servarr start, create the Servarr config, downloads, and media 
 xTeVe keeps its own container user and group through `XTEVE_UID` and `XTEVE_GID`. Keep its config directories writable by those numeric IDs rather than the shared LinuxServer `PUID` and `PGID`.
 
 Plex is not routed through Traefik. It uses host networking so LAN discovery, companion, and DLNA behavior match a native Plex install.
+
+Claim Plex with a fresh `PLEX_CLAIM` token only during first setup, then remove it from `servarr/.env`. Access the server locally with `http://<host-lan-ip>:32400/web`. For direct remote access, forward TCP `32400` on the edge router to the Docker host and configure Plex Remote Access from the Plex admin UI.
 
 ## Usage
 

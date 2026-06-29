@@ -83,6 +83,8 @@ services:
       UPDATE_CRON: ${CLOUDFLARE_DDNS_UPDATE_CRON}
       RECORD_COMMENT: ${CLOUDFLARE_DDNS_RECORD_COMMENT}
       EMOJI: "false"
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     networks:
       egress: {}
     logging: *default-logging
@@ -241,6 +243,8 @@ services:
       AUTHELIA_SESSION_REDIS_HOST: redis_valkey
       AUTHELIA_SESSION_REDIS_PORT: ${REDIS_PORT}
       AUTHELIA_SESSION_REDIS_PASSWORD: ${REDIS_PASSWORD}
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     volumes:
       - ${CONFIG_PATH}/authelia/configuration.yml:/config/configuration.yml:ro
       - ${CONFIG_PATH}/authelia/users_database.yml:/config/users_database.yml:ro

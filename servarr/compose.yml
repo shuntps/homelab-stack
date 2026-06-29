@@ -30,6 +30,8 @@ services:
     volumes:
       - ${CONFIG_PATH}/servarr/qbittorrent:/config
       - ${DOWNLOADS_PATH}:/downloads
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     ports:
       - "${QBITTORRENT_PEER_PORT}:${QBITTORRENT_PEER_PORT}/tcp"
       - "${QBITTORRENT_PEER_PORT}:${QBITTORRENT_PEER_PORT}/udp"
@@ -66,8 +68,7 @@ services:
       <<: *linuxserver-env
       VERSION: docker
       PLEX_CLAIM: ${PLEX_CLAIM}
-      ADVERTISE_IP: ${PLEX_ADVERTISE_URL}
-      UMASK: 022
+      UMASK: "022"
     volumes:
       - ${CONFIG_PATH}/servarr/plex:/config
       - ${DATA_PATH}:/media:slave
@@ -94,6 +95,8 @@ services:
       TZ: ${TZ}
       XTEVE_API: 0
       XTEVE_PORT: 34400
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     volumes:
       - ${CONFIG_PATH}/servarr/xteve/conf:/home/xteve/conf
       - ${CONFIG_PATH}/servarr/xteve/guide2go:/home/xteve/guide2go/conf
@@ -119,6 +122,8 @@ services:
       - no-new-privileges:true
     environment:
       <<: *linuxserver-env
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     volumes:
       - ${CONFIG_PATH}/servarr/prowlarr:/config
     networks:
@@ -152,6 +157,8 @@ services:
       - no-new-privileges:true
     environment:
       <<: *linuxserver-env
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     volumes:
       - ${CONFIG_PATH}/servarr/radarr:/config
       - ${DOWNLOADS_PATH}:/downloads
@@ -187,6 +194,8 @@ services:
       - no-new-privileges:true
     environment:
       <<: *linuxserver-env
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     volumes:
       - ${CONFIG_PATH}/servarr/sonarr:/config
       - ${DOWNLOADS_PATH}:/downloads
@@ -223,6 +232,8 @@ services:
     environment:
       <<: *linuxserver-env
       LOG_LEVEL: info
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     volumes:
       - ${CONFIG_PATH}/servarr/seerr:/app/config
     networks:
@@ -253,6 +264,8 @@ services:
     environment:
       <<: *linuxserver-env
       ORIGIN: https://${PROFILARR_SUBDOMAIN}.${DOMAIN}
+    dns:
+      - ${PIHOLE_DNS_BIND_IP}
     volumes:
       - ${CONFIG_PATH}/servarr/profilarr:/config
     networks:

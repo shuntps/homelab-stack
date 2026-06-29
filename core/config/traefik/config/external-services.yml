@@ -7,7 +7,6 @@ http:
       service: "portainer-service"
       middlewares:
         - "protected-chain"
-        - "portainer-csp"
 
     server:
       rule: 'Host(`{{ env "SERVER_SUBDOMAIN" }}.{{ env "DOMAIN" }}`)'
@@ -16,6 +15,16 @@ http:
       service: "server-service"
       middlewares:
         - "protected-chain"
+
+    # Browser web app manifests cannot complete an authentication redirect.
+    server-manifest:
+      rule: 'Host(`{{ env "SERVER_SUBDOMAIN" }}.{{ env "DOMAIN" }}`) && Path(`/manifest.json`)'
+      entryPoints:
+        - "web"
+      priority: 100
+      service: "server-service"
+      middlewares:
+        - "default-chain"
 
     nas:
       rule: 'Host(`{{ env "NAS_SUBDOMAIN" }}.{{ env "DOMAIN" }}`)'
